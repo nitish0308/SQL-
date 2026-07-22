@@ -124,6 +124,86 @@ ON e.department = d.department;
 
 ---
 
+## Question 5: Pairs of employees in the same department (self join)
+
+**Task:** List every pair of employees who work in the same department, without listing the same pair twice or pairing an employee with themselves.
+
+**My first attempt:**
+```sql
+SELECT e1.name, e2.name, e1.department
+FROM employees e1
+JOIN employees e2
+ON e1.department = e2.department;
+```
+
+**Issues found:**
+- With no extra condition, every employee matches themselves (`e1.name = e2.name`), producing useless self-pairs
+- Each real pair also appears twice — once as (A, B) and once as (B, A)
+
+**Correct solution:**
+```sql
+SELECT e1.name AS employee1, e2.name AS employee2, e1.department
+FROM employees e1
+JOIN employees e2
+  ON e1.department = e2.department
+  AND e1.id < e2.id;
+```
+
+**How it works:**
+- This is a true self join: the `employees` table is joined to itself via two aliases, `e1` and `e2`.
+- `e1.department = e2.department` matches employees in the same department.
+- `e1.id < e2.id` keeps only one direction of each pair and excludes an employee matching itself.
+
+**Expected output:**
+
+| employee1 | employee2 | department |
+|-----------|-----------|------------|
+| Amit | Rohan | Engineering |
+| Priya | Vikram | Sales |
+
+**Note:** Sneha has no pair since she is the only employee in Marketing.
+
+---
+
+## Question 6: Employee with the second-highest salary
+
+**Task:** Find the name and salary of the employee earning the second-highest salary.
+
+**My first attempt:**
+```sql
+SELECT name, salary FROM employees WHERE salary = MAX(salary) - 1000;
+```
+
+**Issues found:**
+- `MAX(salary)` still can't be used directly in `WHERE` — same problem as Question 3
+- Subtracting a fixed amount (`- 1000`) only works if salaries happen to differ by exactly that much; it doesn't actually find the *second-highest*, just a guessed value
+
+**Correct solution:**
+```sql
+SELECT name, salary
+FROM employees
+WHERE salary = (
+    SELECT MAX(salary)
+    FROM employees
+    WHERE salary < (SELECT MAX(salary) FROM employees)
+);
+```
+
+**How it works:**
+1. Innermost subquery `(SELECT MAX(salary) FROM employees)` finds the overall highest salary (81000).
+2. Middle subquery finds the highest salary among rows *below* that value — i.e. the second-highest (75000).
+3. Outer query returns the employee(s) matching that salary.
+
+**Expected output:**
+
+| name | salary |
+|------|--------|
+| Amit | 75000 |
+
+**Handling ties:** Like Question 3, this returns *every* employee at that salary level, and correctly skips ties for first place — if two employees tied for the highest salary, they'd both be excluded from the "second-highest" result, which is the standard definition of second-highest.
+
+---
+
 ## Key Concepts Recap
 
 | Clause | Purpose | Notes |
