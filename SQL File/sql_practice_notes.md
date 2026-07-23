@@ -23,6 +23,9 @@ Warmup session covering `GROUP BY`, `HAVING`, subqueries, and `JOIN`s.
 | 1 | Engineering | Rohan |
 | 2 | Sales | Vikram |
 | 3 | Marketing | Sneha |
+| 4 | HR | Kavita |
+
+**Note:** HR has no rows in `employees` yet — used in Question 7 to test outer joins.
 
 ---
 
@@ -204,6 +207,46 @@ WHERE salary = (
 
 ---
 
+## Question 7: Departments with no employees
+
+**Task:** List every department that currently has no employees assigned to it.
+
+**My first attempt:**
+```sql
+SELECT d.department
+FROM departments d
+JOIN employees e
+ON d.department = e.department
+WHERE e.name IS NULL;
+```
+
+**Issues found:**
+- A plain (`INNER`) `JOIN` only keeps rows that match on *both* sides — a department with zero matching employees gets dropped entirely, so `e.name` is never actually `NULL` in the result set
+- To keep unmatched department rows, the join needs to be a `LEFT JOIN` (departments on the left, kept even without a match)
+
+**Correct solution:**
+```sql
+SELECT d.department
+FROM departments d
+LEFT JOIN employees e
+  ON d.department = e.department
+WHERE e.id IS NULL;
+```
+
+**How it works:**
+- `LEFT JOIN` keeps every row from `departments`, filling in `NULL` for `employees` columns when there's no match.
+- `WHERE e.id IS NULL` then filters down to only the departments that had no matching employee at all.
+
+**Expected output:**
+
+| department |
+|------------|
+| HR |
+
+**Why `e.id IS NULL` and not `e.name IS NULL`:** Either works here since no employee has a `NULL` name, but filtering on the joined table's key column (`e.id`) is the safer habit — it can't accidentally match a real row that just happens to have a `NULL` value in some other column.
+
+---
+
 ## Key Concepts Recap
 
 | Clause | Purpose | Notes |
@@ -213,6 +256,7 @@ WHERE salary = (
 | `HAVING` | Filters *groups* after aggregation | Think of it as `WHERE` for aggregated groups |
 | Subquery | A query nested inside another query | Useful when filtering against an aggregate value |
 | `JOIN` | Combines rows from two tables based on a related column | Different from a self join, which joins a table to itself |
+| `LEFT JOIN` | Keeps all rows from the left table, even without a match | Unmatched right-side columns come back `NULL` — useful for finding "has none" cases |
 
 **Order of SQL execution:** `FROM` → `WHERE` → `GROUP BY` → `HAVING` → `SELECT` → `ORDER BY`
 
